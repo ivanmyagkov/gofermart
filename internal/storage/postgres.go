@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 
 	"github.com/jackc/pgerrcode"
@@ -44,10 +45,24 @@ func createTable(db *sql.DB) error {
 		login text not null unique,
 		password text not null,
         "current" float not null default 0,
-        withdrawn int not null  default 0);
+        withdrawn int not null  default 0
+        );
+		CREATE TABLE IF NOT EXISTS orders (
+		    "number" text primary key unique,
+		    user_id int not null references users(id),
+		    status text not null,
+		    accrual int,
+		    uploaded_at timestamp
+		);
+		CREATE TABLE IF NOT EXISTS withdrawals (
+		    order_number text not null unique references orders(number),
+		    sum int not null,
+		    processed_at timestamp
+		);
+
+		
 	`
 	_, err := db.Exec(query)
-	log.Println(err)
 	if err != nil {
 		return err
 	}
@@ -59,8 +74,8 @@ func (D *Storage) UserRegister(user dto.User) error {
 	if err != nil {
 		return err
 	}
-	query := `INSERT INTO users (login, password) VALUES ($1, $2) `
-	_, err = D.db.Exec(query, user.Login, hash)
+	query := `INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id`
+	err = D.db.QueryRow(query, user.Login, hash).Scan(&user.UserID)
 	if err != nil {
 		errCode := err.(*pq.Error).Code
 		if pgerrcode.IsIntegrityConstraintViolation(string(errCode)) {
@@ -71,15 +86,85 @@ func (D *Storage) UserRegister(user dto.User) error {
 	return nil
 }
 
-func (D *Storage) UserLogin(user dto.User) error {
+func (D *Storage) UserLogin(user *dto.User) error {
 	var u dto.User
-	query := `SELECT login,password FROM users WHERE login=$1`
-	D.db.QueryRow(query, user.Login).Scan(&u.Login, &u.Password)
+	query := `SELECT id,password FROM users WHERE login=$1`
+	D.db.QueryRow(query, user.Login).Scan(&user.UserID, &u.Password)
 	check := utils.CheckPasswordHash(user.Password, u.Password)
 	if !check {
 		return interfaces.ErrBadPassword
 	}
 	return nil
+}
+
+func (D *Storage) UserBalance(userID int) (dto.Balance, error) {
+	var balance dto.Balance
+	query := `SELECT "current",withdrawn FROM users WHERE id=$1`
+	err := D.db.QueryRow(query, userID).Scan(&balance.Current, &balance.Withdrawn)
+	if err != nil {
+		return balance, err
+	}
+	return balance, nil
+}
+func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
+	var money int
+	var check bool
+	query := `SELECT "current" FROM users WHERE id=$1`
+	err := D.db.QueryRow(query, userID).Scan(&money)
+	if err != nil {
+		return err
+	}
+	if money < withdraw.Sum {
+		return interfaces.ErrMoney
+	}
+	orderQuerty := `SELECT true FROM orders WHERE "number"=$1 and user_id=$2`
+	err = D.db.QueryRow(orderQuerty, withdraw.Order, userID).Scan(&check)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return interfaces.ErrWrongOrder
+		}
+		return err
+	}
+
+	insetrQuery := `INSERT INTO withdrawals (order_number, sum, processed_at) VALUES ($1,$2,$3)`
+	_, err = D.db.Exec(insetrQuery, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
+	if err != nil {
+		return err
+	}
+	updateBalance := `update users set current = "current"-$1,withdrawn = withdrawn+$1 where id= $2 `
+	_, err = D.db.Exec(updateBalance, withdraw.Sum, userID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (D *Storage) GetUserWithdrawals(userID int) ([]dto.Withdrawals, error) {
+	var withdrawalsArr []dto.Withdrawals
+	var withdrawl dto.Withdrawals
+	query := `select w.order_number, w.sum, w.processed_at from withdrawals w left join orders o on o.number = w.order_number where o.user_id=$1`
+	rows, err := D.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		if err = rows.Scan(&withdrawl.Order, &withdrawl.Sum, &withdrawl.ProcessedAt); err != nil {
+			return nil, err
+		}
+		withdrawalsArr = append(withdrawalsArr, withdrawl)
+	}
+	if len(withdrawalsArr) == 0 {
+		return nil, interfaces.ErrNotFound
+	}
+
+	return withdrawalsArr, nil
 }
 
 func (D *Storage) Ping() error {

@@ -20,6 +20,7 @@ func SessionWithCookies(next echo.HandlerFunc) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusUnauthorized)
 		} else {
 			_, ok, err = utils.CheckToken(cookie.Value)
+
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError)
 			} else {

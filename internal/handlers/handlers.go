@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -49,7 +49,7 @@ func (h *Handler) PostUserRegister(c echo.Context) error {
 		}
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	if err = utils.CreateCookie(c, user.Login); err != nil {
+	if err = utils.CreateCookie(c, user.Login, user.UserID); err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusOK)
@@ -72,14 +72,13 @@ func (h *Handler) PostUserLogin(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	if err = h.db.UserLogin(user); err != nil {
-		log.Println(err)
+	if err = h.db.UserLogin(&user); err != nil {
 		if errors.Is(err, interfaces.ErrBadPassword) {
 			return c.NoContent(http.StatusUnauthorized)
 		}
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	if err = utils.CreateCookie(c, user.Login); err != nil {
+	if err = utils.CreateCookie(c, user.Login, user.UserID); err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	return c.NoContent(http.StatusOK)
@@ -91,17 +90,51 @@ func (h *Handler) PostUserOrders(c echo.Context) error {
 }
 
 func (h *Handler) GetUserOrders(c echo.Context) error {
+
 	return c.NoContent(http.StatusOK)
 }
 
 func (h *Handler) GetUserBalance(c echo.Context) error {
-	return c.NoContent(http.StatusOK)
+	userID := utils.GetUserID(c)
+	var balance dto.Balance
+	balance, err := h.db.UserBalance(userID)
+	if err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	return c.JSON(http.StatusOK, balance)
 }
 
 func (h *Handler) PostUserBalanceWithdraw(c echo.Context) error {
+	userID := utils.GetUserID(c)
+	var withdrawal dto.Withdrawals
+	body, err := io.ReadAll(c.Request().Body)
+	if err != nil || len(body) == 0 {
+		return c.NoContent(http.StatusBadRequest)
+	}
+
+	err = json.Unmarshal(body, &withdrawal)
+	withdrawal.ProcessedAt = time.Now().Format(time.RFC3339)
+	err = h.db.BalanceWithdraw(userID, withdrawal)
+	if err != nil {
+		if errors.Is(err, interfaces.ErrMoney) {
+			return c.NoContent(http.StatusPaymentRequired)
+		} else if errors.Is(err, interfaces.ErrWrongOrder) {
+			return c.NoContent(http.StatusUnprocessableEntity)
+		}
+		return c.NoContent(http.StatusInternalServerError)
+	}
 	return c.NoContent(http.StatusOK)
 }
 
 func (h *Handler) GetUserBalanceWithdrawals(c echo.Context) error {
-	return c.NoContent(http.StatusOK)
+	var result []dto.Withdrawals
+	userID := utils.GetUserID(c)
+	result, err := h.db.GetUserWithdrawals(userID)
+	if err != nil {
+		if errors.Is(err, interfaces.ErrNotFound) {
+			return c.NoContent(http.StatusNoContent)
+		}
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	return c.JSON(http.StatusOK, result)
 }
