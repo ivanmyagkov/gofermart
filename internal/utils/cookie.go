@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/golang-jwt/jwt"
@@ -14,7 +13,6 @@ import (
 func CreateToken(login string, userID int) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"user": login, "userID": userID})
 	tokenString, _ := token.SignedString(config.TokenKey)
-	log.Println(tokenString)
 	return tokenString, nil
 }
 
@@ -27,7 +25,6 @@ func CheckToken(tokenString string) (string, bool, error) {
 		return config.TokenKey, nil
 	})
 	if err != nil {
-		log.Println(err)
 		return "", false, err
 	}
 

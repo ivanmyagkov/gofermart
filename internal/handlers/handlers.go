@@ -113,6 +113,10 @@ func (h *Handler) PostUserBalanceWithdraw(c echo.Context) error {
 	}
 
 	err = json.Unmarshal(body, &withdrawal)
+	if err != nil {
+		return c.NoContent(http.StatusBadRequest)
+	}
+
 	withdrawal.ProcessedAt = time.Now().Format(time.RFC3339)
 	err = h.db.BalanceWithdraw(userID, withdrawal)
 	if err != nil {

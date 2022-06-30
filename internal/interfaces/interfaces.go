@@ -14,7 +14,7 @@ var (
 	ErrCreateTable   = errors.New("create tables error")
 	ErrPingDB        = errors.New("ping Db error")
 	ErrWrongOrder    = errors.New("wrong order number")
-	ErrMoney         = errors.New("Not enough money ")
+	ErrMoney         = errors.New("no enough money")
 )
 
 type DB interface {
