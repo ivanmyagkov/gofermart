@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
@@ -51,7 +52,7 @@ func createTable(db *sql.DB) error {
 		    "number" text primary key unique,
 		    user_id int not null references users(id),
 		    status text not null,
-		    accrual int,
+		    accrual float,
 		    uploaded_at timestamp
 		);
 		CREATE TABLE IF NOT EXISTS withdrawals (
@@ -69,7 +70,7 @@ func createTable(db *sql.DB) error {
 	return nil
 }
 
-func (D *Storage) UserRegister(user dto.User) error {
+func (D *Storage) UserRegister(user *dto.User) error {
 	hash, err := utils.HashPassword(user.Password)
 	if err != nil {
 		return err
@@ -95,6 +96,62 @@ func (D *Storage) UserLogin(user *dto.User) error {
 		return interfaces.ErrBadPassword
 	}
 	return nil
+}
+
+func (D *Storage) SaveOrder(number string, userID int) error {
+	var order dto.Order
+	order.Number = number
+	order.Status = dto.StatusNew
+	order.Accrual = 0
+	time := time.Now().Format(time.RFC3339)
+
+	insertQuery := `INSERT INTO orders (number, user_id, status, accrual, uploaded_at) VALUES ($1,$2,$3,$4,$5)`
+	_, err := D.db.Exec(insertQuery, order.Number, userID, order.Status, order.Accrual, time)
+
+	if err != nil {
+		errCode := err.(*pq.Error).Code
+		if pgerrcode.IsIntegrityConstraintViolation(string(errCode)) {
+			var user int
+			selectOrder := `SELECT user_id FROM orders WHERE number=$1`
+			err = D.db.QueryRow(selectOrder, number).Scan(&user)
+			if err != nil {
+				return err
+			}
+
+			if user == userID {
+				return interfaces.ErrAlreadyExists
+			}
+			return interfaces.ErrOtherUser
+		}
+	}
+
+	return nil
+}
+
+func (D *Storage) GetOrders(userID int) ([]dto.Order, error) {
+	var order dto.Order
+	var ordersArr []dto.Order
+	query := `SELECT number, status, accrual, uploaded_at FROM orders WHERE user_id = $1`
+	rows, err := D.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		if err = rows.Scan(&order.Number, &order.Status, &order.Status, &order.UploadedAt); err != nil {
+			return nil, err
+		}
+		ordersArr = append(ordersArr, order)
+	}
+	if len(ordersArr) == 0 {
+		return nil, interfaces.ErrNotFound
+	}
+	return ordersArr, nil
 }
 
 func (D *Storage) UserBalance(userID int) (dto.Balance, error) {
@@ -137,6 +194,10 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+func (D *Storage) UpdateAccrualOrder(num string) error {
+	log.Println(num)
 	return nil
 }
 

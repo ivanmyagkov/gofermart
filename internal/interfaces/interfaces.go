@@ -15,14 +15,18 @@ var (
 	ErrPingDB        = errors.New("ping Db error")
 	ErrWrongOrder    = errors.New("wrong order number")
 	ErrMoney         = errors.New("no enough money")
+	ErrOtherUser     = errors.New("other user have this order")
 )
 
 type DB interface {
-	UserRegister(user dto.User) error
+	UserRegister(user *dto.User) error
 	UserLogin(user *dto.User) error
+	SaveOrder(number string, userID int) error
+	GetOrders(userID int) ([]dto.Order, error)
 	UserBalance(userID int) (dto.Balance, error)
 	BalanceWithdraw(userID int, withdraw dto.Withdrawals) error
 	GetUserWithdrawals(userID int) ([]dto.Withdrawals, error)
+	UpdateAccrualOrder(num string) error
 	Ping() error
 	Close() error
 }

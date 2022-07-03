@@ -42,6 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create db %e", err)
 	}
+
 	srv := server.InitSrv(db)
 
 	go func() {

@@ -43,7 +43,7 @@ func (h *Handler) PostUserRegister(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	if err = h.db.UserRegister(user); err != nil {
+	if err = h.db.UserRegister(&user); err != nil {
 		if errors.Is(err, interfaces.ErrAlreadyExists) {
 			return c.NoContent(http.StatusConflict)
 		}
@@ -86,12 +86,38 @@ func (h *Handler) PostUserLogin(c echo.Context) error {
 }
 
 func (h *Handler) PostUserOrders(c echo.Context) error {
-	return c.NoContent(http.StatusOK)
+	userID := utils.GetUserID(c)
+	number, err := io.ReadAll(c.Request().Body)
+	if err != nil || len(number) == 0 {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	if ok := utils.Valid(string(number)); !ok {
+		return c.NoContent(http.StatusUnprocessableEntity)
+	}
+	err = h.db.SaveOrder(string(number), userID)
+	if err != nil {
+		if errors.Is(err, interfaces.ErrAlreadyExists) {
+			return c.NoContent(http.StatusOK)
+		} else if errors.Is(err, interfaces.ErrOtherUser) {
+			return c.NoContent(http.StatusConflict)
+		}
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.NoContent(http.StatusAccepted)
 }
 
 func (h *Handler) GetUserOrders(c echo.Context) error {
+	userID := utils.GetUserID(c)
+	orders, err := h.db.GetOrders(userID)
+	if err != nil {
+		if errors.Is(err, interfaces.ErrNotFound) {
+			return c.NoContent(http.StatusNoContent)
+		}
+		return c.NoContent(http.StatusInternalServerError)
+	}
 
-	return c.NoContent(http.StatusOK)
+	return c.JSON(http.StatusOK, orders)
 }
 
 func (h *Handler) GetUserBalance(c echo.Context) error {
@@ -111,10 +137,12 @@ func (h *Handler) PostUserBalanceWithdraw(c echo.Context) error {
 	if err != nil || len(body) == 0 {
 		return c.NoContent(http.StatusBadRequest)
 	}
-
 	err = json.Unmarshal(body, &withdrawal)
 	if err != nil {
 		return c.NoContent(http.StatusBadRequest)
+	}
+	if ok := utils.Valid(withdrawal.Order); !ok {
+		return c.NoContent(http.StatusUnprocessableEntity)
 	}
 
 	withdrawal.ProcessedAt = time.Now().Format(time.RFC3339)

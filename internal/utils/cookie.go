@@ -40,7 +40,6 @@ func CreateCookie(c echo.Context, login string, userID int) error {
 	cookie := new(http.Cookie)
 	cookie.Path = "/"
 	cookie.Value, err = CreateToken(login, userID)
-
 	if err != nil {
 		return err
 	}
@@ -57,7 +56,6 @@ func GetUserID(c echo.Context) int {
 		return config.TokenKey, nil
 	})
 	var claims = token.Claims.(jwt.MapClaims)
-
 	return int(claims["userID"].(float64))
 
 }

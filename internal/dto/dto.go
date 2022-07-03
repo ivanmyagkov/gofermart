@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 type User struct {
 	UserID   int    `json:"user_id"`
 	Login    string `json:"login"`
@@ -15,4 +17,13 @@ type Withdrawals struct {
 type Balance struct {
 	Current   float64 `json:"current"`
 	Withdrawn int     `json:"withdrawn"`
+}
+
+const StatusNew = "NEW"
+
+type Order struct {
+	Number     string  `json:"number"`
+	Status     string  `json:"status"`
+	Accrual    float64 `json:"accrual"`
+	UploadedAt time.Time
 }
