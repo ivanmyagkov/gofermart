@@ -69,6 +69,7 @@ func (c *AccrualClient) SentOrder(order string) (int, error) {
 					return 0, err
 				}
 			}
+			c.qu <- order
 		}
 
 	case http.StatusTooManyRequests:
