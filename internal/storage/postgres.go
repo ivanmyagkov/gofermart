@@ -58,10 +58,11 @@ func createTable(db *sql.DB) error {
 		    uploaded_at timestamp
 		);
 		CREATE TABLE IF NOT EXISTS withdrawals (
-		    order_number text not null unique references orders(number),
-		    sum int not null,
-		    processed_at timestamp
-		);
+	    	user_id text not null references users(id),
+			order_number text not null unique,
+			"sum" float not null,
+			processed_at timestamp
+	);
 
 		
 	`
@@ -180,31 +181,31 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	if money < withdraw.Sum {
 		return interfaces.ErrMoney
 	}
-	orderQuerty := `SELECT true FROM orders WHERE "number"=$1 and user_id=$2`
+	orderQuerty := `SELECT true FROM withdrawals WHERE "number"=$1 and user_id=$2`
 	err = D.db.QueryRow(orderQuerty, withdraw.Order, userID).Scan(&check)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return interfaces.ErrWrongOrder
+			insetrQuery := `INSERT INTO withdrawals (user_id, order_number, sum, processed_at) VALUES ($1,$2,$3,$4)`
+			_, err = D.db.Exec(insetrQuery, userID, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
+			if err != nil {
+				return err
+			}
+			updateBalance := `update users set current = "current"-$1,withdrawn = withdrawn+$1 where id= $2 `
+			_, err = D.db.Exec(updateBalance, withdraw.Sum, userID)
+			if err != nil {
+				return err
+			}
 		}
 		return err
 	}
 
-	insetrQuery := `INSERT INTO withdrawals (order_number, sum, processed_at) VALUES ($1,$2,$3)`
-	_, err = D.db.Exec(insetrQuery, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
-	if err != nil {
-		return err
-	}
-	updateBalance := `update users set current = "current"-$1,withdrawn = withdrawn+$1 where id= $2 `
-	_, err = D.db.Exec(updateBalance, withdraw.Sum, userID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return interfaces.ErrWrongOrder
 }
 func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
 	D.mu.Lock()
 	defer D.mu.Unlock()
+	log.Println("ya tut")
 	var userID int
 	query := `UPDATE orders SET status = $1, accrual = $2 WHERE number = $3 RETURNING user_id`
 	err := D.db.QueryRow(query, ac.OrderStatus, ac.Accrual, ac.NumOrder).Scan(&userID)

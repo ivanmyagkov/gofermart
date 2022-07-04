@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -34,7 +33,6 @@ func NewAccrualClient(address string, db interfaces.DB, qu chan string) *Accrual
 }
 
 func (c *AccrualClient) SentOrder(order string) (int, error) {
-	log.Println("hiii")
 	url := fmt.Sprint(c.address, "/api/orders/", order)
 
 	//resp, err := c.client.R().SetContext(ctx).SetPathParams(map[string]string{"orderNumber": task.NumOrder}).Get(c.accrualAddress + "/api/orders/{orderNumber}")
