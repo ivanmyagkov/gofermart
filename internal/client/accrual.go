@@ -46,6 +46,10 @@ func (c *AccrualClient) SentOrder(order string) (int, error) {
 	defer resp.Body.Close()
 	var accrual dto.AccrualResponse
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		c.qu <- order
+		return 0, err
+	}
 	switch resp.StatusCode {
 	case http.StatusOK:
 		err = json.Unmarshal(body, &accrual)

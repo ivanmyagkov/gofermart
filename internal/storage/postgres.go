@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -16,6 +17,7 @@ import (
 )
 
 type Storage struct {
+	mu  sync.Mutex
 	db  *sql.DB
 	ctx context.Context
 }
@@ -99,6 +101,8 @@ func (D *Storage) UserLogin(user *dto.User) error {
 }
 
 func (D *Storage) SaveOrder(number string, userID int, qu chan string) error {
+	D.mu.Lock()
+	defer D.mu.Unlock()
 	var order dto.Order
 	order.Number = number
 	order.Status = dto.StatusNew
@@ -129,6 +133,8 @@ func (D *Storage) SaveOrder(number string, userID int, qu chan string) error {
 }
 
 func (D *Storage) GetOrders(userID int) ([]dto.Order, error) {
+	D.mu.Lock()
+	defer D.mu.Unlock()
 	var order dto.Order
 	var ordersArr []dto.Order
 	query := `SELECT number, status, accrual, uploaded_at FROM orders WHERE user_id = $1`
@@ -197,6 +203,8 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	return nil
 }
 func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
+	D.mu.Lock()
+	defer D.mu.Unlock()
 	var userID int
 	query := `UPDATE orders SET status = $1, accrual = $2 WHERE number = $3 RETURNING user_id`
 	err := D.db.QueryRow(query, ac.OrderStatus, ac.Accrual, ac.NumOrder).Scan(&userID)
