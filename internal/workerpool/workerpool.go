@@ -2,7 +2,6 @@ package workerpool
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"ivanmyagkov/gofermart/internal/client"
@@ -37,7 +36,6 @@ func (w *OutputWorker) Do() error {
 			if err != nil {
 				return err
 			}
-			log.Println(wait)
 			if wait != 0 {
 				time.Sleep(time.Duration(wait) * time.Second)
 			}

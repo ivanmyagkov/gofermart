@@ -227,7 +227,7 @@ func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
 func (D *Storage) GetUserWithdrawals(userID int) ([]dto.Withdrawals, error) {
 	var withdrawalsArr []dto.Withdrawals
 	var withdrawl dto.Withdrawals
-	query := `select w.order_number, w.sum, w.processed_at from withdrawals w left join orders o on o.number = w.order_number where o.user_id=$1`
+	query := `select w.order_number, w.sum, w.processed_at from withdrawals wleft join users u on u.id = w.user_id where u.id==$1`
 	rows, err := D.db.Query(query, userID)
 	if err != nil {
 		return nil, err
