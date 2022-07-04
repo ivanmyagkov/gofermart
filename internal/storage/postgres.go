@@ -59,7 +59,7 @@ func createTable(db *sql.DB) error {
 		);
 		CREATE TABLE IF NOT EXISTS withdrawals (
 	    	user_id int not null references users(id),
-			order_number text not null unique,
+			"number" text not null unique,
 			"sum" float not null,
 			processed_at timestamp
 	);
@@ -186,17 +186,21 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			insetrQuery := `INSERT INTO withdrawals (user_id, order_number, sum, processed_at) VALUES ($1,$2,$3,$4)`
+			insetrQuery := `INSERT INTO withdrawals (user_id, "number", sum, processed_at) VALUES ($1,$2,$3,$4)`
 			_, err = D.db.Exec(insetrQuery, userID, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
 			if err != nil {
+				log.Println(1, err)
 				return err
 			}
 			updateBalance := `update users set current = "current"-$1,withdrawn = withdrawn+$1 where id= $2 `
 			_, err = D.db.Exec(updateBalance, withdraw.Sum, userID)
 			if err != nil {
+				log.Println(2, err)
 				return err
 			}
+			return nil
 		}
+		log.Println(err)
 		return err
 	}
 
