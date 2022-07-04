@@ -62,16 +62,13 @@ func (c *AccrualClient) SentOrder(order string) (int, error) {
 			}
 		}
 
-		if accrual.OrderStatus == StatusProcessing {
-			accrual.OrderStatus = dto.StatusNew
-			if err = c.db.UpdateAccrualOrder(accrual); err != nil {
-				c.qu <- order
-				return 0, err
+		if accrual.OrderStatus == StatusProcessing || accrual.OrderStatus == StatusRegistered {
+			if accrual.OrderStatus == StatusProcessing {
+				if err = c.db.UpdateAccrualOrder(accrual); err != nil {
+					c.qu <- order
+					return 0, err
+				}
 			}
-		}
-		if err = c.db.UpdateAccrualOrder(accrual); err != nil {
-			c.qu <- order
-			return 0, err
 		}
 
 	case http.StatusTooManyRequests:

@@ -48,7 +48,7 @@ func createTable(db *sql.DB) error {
 		login text not null unique,
 		password text not null,
         "current" float not null default 0,
-        withdrawn int not null  default 0
+        withdrawn float not null  default 0
         );
 		CREATE TABLE IF NOT EXISTS orders (
 		    "number" text primary key unique,
@@ -171,7 +171,7 @@ func (D *Storage) UserBalance(userID int) (dto.Balance, error) {
 	return balance, nil
 }
 func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
-	var money int
+	var money float64
 	var check bool
 	query := `SELECT "current" FROM users WHERE id=$1`
 	err := D.db.QueryRow(query, userID).Scan(&money)

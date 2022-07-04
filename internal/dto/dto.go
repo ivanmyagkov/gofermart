@@ -9,15 +9,15 @@ type User struct {
 }
 
 type Withdrawals struct {
-	UserID      int    `json:"user_id"`
-	Order       string `json:"order"`
-	Sum         int    `json:"sum"`
-	ProcessedAt string `json:"processed_at,omitempty"`
+	UserID      int     `json:"user_id"`
+	Order       string  `json:"order"`
+	Sum         float64 `json:"sum"`
+	ProcessedAt string  `json:"processed_at,omitempty"`
 }
 
 type Balance struct {
 	Current   float64 `json:"current"`
-	Withdrawn int     `json:"withdrawn"`
+	Withdrawn float64 `json:"withdrawn"`
 }
 
 const StatusNew = "NEW"
