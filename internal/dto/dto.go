@@ -9,6 +9,7 @@ type User struct {
 }
 
 type Withdrawals struct {
+	UserID      int    `json:"user_id"`
 	Order       string `json:"order"`
 	Sum         int    `json:"sum"`
 	ProcessedAt string `json:"processed_at,omitempty"`
