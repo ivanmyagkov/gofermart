@@ -58,7 +58,7 @@ func createTable(db *sql.DB) error {
 		    uploaded_at timestamp
 		);
 		CREATE TABLE IF NOT EXISTS withdrawals (
-	    	user_id text not null references users(id),
+	    	user_id int not null references users(id),
 			order_number text not null unique,
 			"sum" float not null,
 			processed_at timestamp
