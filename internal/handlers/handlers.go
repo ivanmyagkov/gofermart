@@ -89,6 +89,9 @@ func (h *Handler) PostUserLogin(c echo.Context) error {
 
 func (h *Handler) PostUserOrders(c echo.Context) error {
 	userID := utils.GetUserID(c)
+	if c.Request().Header.Get("Content-Type") != "text/plain" {
+		return c.NoContent(http.StatusBadRequest)
+	}
 	number, err := io.ReadAll(c.Request().Body)
 	if err != nil || len(number) == 0 {
 		return c.NoContent(http.StatusBadRequest)
