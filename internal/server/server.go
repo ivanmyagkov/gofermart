@@ -9,9 +9,9 @@ import (
 	"ivanmyagkov/gofermart/internal/middlewares"
 )
 
-func InitSrv(db interfaces.DB) *echo.Echo {
+func InitSrv(db interfaces.DB, qu chan string) *echo.Echo {
 	//server
-	handler := handlers.New(db)
+	handler := handlers.New(db, qu)
 
 	//new Echo instance
 	e := echo.New()

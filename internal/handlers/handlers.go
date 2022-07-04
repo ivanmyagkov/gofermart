@@ -16,11 +16,13 @@ import (
 
 type Handler struct {
 	db interfaces.DB
+	qu chan string
 }
 
-func New(db interfaces.DB) *Handler {
+func New(db interfaces.DB, qu chan string) *Handler {
 	return &Handler{
 		db: db,
+		qu: qu,
 	}
 }
 
@@ -94,7 +96,7 @@ func (h *Handler) PostUserOrders(c echo.Context) error {
 	if ok := utils.Valid(string(number)); !ok {
 		return c.NoContent(http.StatusUnprocessableEntity)
 	}
-	err = h.db.SaveOrder(string(number), userID)
+	err = h.db.SaveOrder(string(number), userID, h.qu)
 	if err != nil {
 		if errors.Is(err, interfaces.ErrAlreadyExists) {
 			return c.NoContent(http.StatusOK)

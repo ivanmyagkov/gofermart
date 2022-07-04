@@ -27,3 +27,9 @@ type Order struct {
 	Accrual    float64 `json:"accrual"`
 	UploadedAt time.Time
 }
+
+type AccrualResponse struct {
+	NumOrder    string  `json:"order"`
+	OrderStatus string  `json:"status"`
+	Accrual     float64 `json:"accrual"`
+}

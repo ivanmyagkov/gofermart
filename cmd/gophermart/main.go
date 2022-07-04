@@ -7,14 +7,17 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"github.com/caarlos0/env/v6"
 
+	"ivanmyagkov/gofermart/internal/client"
 	"ivanmyagkov/gofermart/internal/config"
 	"ivanmyagkov/gofermart/internal/interfaces"
 	"ivanmyagkov/gofermart/internal/server"
 	"ivanmyagkov/gofermart/internal/storage"
+	"ivanmyagkov/gofermart/internal/workerpool"
 )
 
 func init() {
@@ -24,7 +27,7 @@ func init() {
 	}
 	flag.StringVar(&config.Flags.A, "a", config.EnvVar.RunAddress, "server address")
 	flag.StringVar(&config.Flags.D, "d", config.EnvVar.DatabaseURI, "database uri")
-	flag.StringVar(&config.Flags.R, "f", config.EnvVar.AccrualSystemAddress, "accrual system address")
+	flag.StringVar(&config.Flags.R, "r", config.EnvVar.AccrualSystemAddress, "accrual system address")
 	flag.Parse()
 }
 func main() {
@@ -42,8 +45,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create db %e", err)
 	}
+	qu := make(chan string, 100)
+	client := client.NewAccrualClient(config.Flags.R, db, qu)
 
-	srv := server.InitSrv(db)
+	srv := server.InitSrv(db, qu)
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		worker := workerpool.NewWorker(qu, client, ctx)
+		go worker.Do()
+	}
 
 	go func() {
 

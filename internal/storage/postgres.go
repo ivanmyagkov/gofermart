@@ -98,7 +98,7 @@ func (D *Storage) UserLogin(user *dto.User) error {
 	return nil
 }
 
-func (D *Storage) SaveOrder(number string, userID int) error {
+func (D *Storage) SaveOrder(number string, userID int, qu chan string) error {
 	var order dto.Order
 	order.Number = number
 	order.Status = dto.StatusNew
@@ -124,7 +124,7 @@ func (D *Storage) SaveOrder(number string, userID int) error {
 			return interfaces.ErrOtherUser
 		}
 	}
-
+	qu <- number
 	return nil
 }
 
@@ -196,8 +196,18 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	}
 	return nil
 }
-func (D *Storage) UpdateAccrualOrder(num string) error {
-	log.Println(num)
+func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
+	var userID int
+	query := `UPDATE orders SET status = $1, accrual = $2 WHERE number = $3 RETURNING user_id`
+	err := D.db.QueryRow(query, ac.OrderStatus, ac.Accrual, ac.NumOrder).Scan(&userID)
+	if err != nil {
+		return err
+	}
+	update := `UPDATE users SET current = current + $1 WHERE id = $2`
+	_, err = D.db.Exec(update, ac.Accrual, userID)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -21,12 +21,12 @@ var (
 type DB interface {
 	UserRegister(user *dto.User) error
 	UserLogin(user *dto.User) error
-	SaveOrder(number string, userID int) error
+	SaveOrder(number string, userID int, qu chan string) error
 	GetOrders(userID int) ([]dto.Order, error)
 	UserBalance(userID int) (dto.Balance, error)
 	BalanceWithdraw(userID int, withdraw dto.Withdrawals) error
 	GetUserWithdrawals(userID int) ([]dto.Withdrawals, error)
-	UpdateAccrualOrder(num string) error
+	UpdateAccrualOrder(ac dto.AccrualResponse) error
 	Ping() error
 	Close() error
 }
