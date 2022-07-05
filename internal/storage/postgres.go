@@ -150,7 +150,7 @@ func (D *Storage) GetOrders(userID int) ([]dto.Order, error) {
 	}
 
 	for rows.Next() {
-		if err = rows.Scan(&order.Number, &order.Status, &order.Status, &order.UploadedAt); err != nil {
+		if err = rows.Scan(&order.Number, &order.Status, &order.Accrual, &order.UploadedAt); err != nil {
 			return nil, err
 		}
 		ordersArr = append(ordersArr, order)
