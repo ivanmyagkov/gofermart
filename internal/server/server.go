@@ -26,7 +26,7 @@ func InitSrv(db interfaces.DB, qu chan string) *echo.Echo {
 	e.GET("/api/user/orders", handler.GetUserOrders)
 	e.GET("/api/user/balance", handler.GetUserBalance)
 	e.POST("/api/user/balance/withdraw", handler.PostUserBalanceWithdraw)
-	e.GET("/api/user/balance/withdrawals", handler.GetUserBalanceWithdrawals)
+	e.GET("/api/user/withdrawals", handler.GetUserBalanceWithdrawals)
 
 	return e
 }

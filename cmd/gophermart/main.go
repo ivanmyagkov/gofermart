@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/caarlos0/env/v6"
+	"golang.org/x/sync/errgroup"
 
 	"ivanmyagkov/gofermart/internal/client"
 	"ivanmyagkov/gofermart/internal/config"
@@ -45,13 +46,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create db %e", err)
 	}
+	g, _ := errgroup.WithContext(ctx)
 	qu := make(chan string, 100)
 	client := client.NewAccrualClient(config.Flags.R, db, qu)
 
 	srv := server.InitSrv(db, qu)
 	for i := 1; i <= runtime.NumCPU(); i++ {
 		worker := workerpool.NewWorker(qu, client, ctx)
-		go worker.Do()
+		g.Go(worker.Do)
 	}
 
 	go func() {
@@ -67,6 +69,11 @@ func main() {
 
 		if err = db.Close(); err != nil {
 			log.Println("Failed db...", err)
+		}
+		close(qu)
+		err = g.Wait()
+		if err != nil {
+			log.Println("err-group...", err)
 		}
 	}()
 

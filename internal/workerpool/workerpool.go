@@ -9,7 +9,6 @@ import (
 
 type OutputWorker struct {
 	ch     chan string
-	done   chan struct{}
 	client *client.AccrualClient
 	ctx    context.Context
 	ticker *time.Ticker
