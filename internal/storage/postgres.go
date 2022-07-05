@@ -200,7 +200,6 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 			}
 			return nil
 		}
-		log.Println(err)
 		return err
 	}
 

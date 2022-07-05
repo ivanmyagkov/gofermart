@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -167,6 +168,7 @@ func (h *Handler) GetUserBalanceWithdrawals(c echo.Context) error {
 	var result []dto.Withdrawals
 	userID := utils.GetUserID(c)
 	result, err := h.db.GetUserWithdrawals(userID)
+	log.Println(err, "get withdraw")
 	if err != nil {
 		if errors.Is(err, interfaces.ErrNotFound) {
 			return c.NoContent(http.StatusNoContent)
