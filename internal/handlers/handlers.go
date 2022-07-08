@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -100,7 +99,7 @@ func (h *Handler) PostUserOrders(c echo.Context) error {
 	if ok := utils.Valid(string(number)); !ok {
 		return c.NoContent(http.StatusUnprocessableEntity)
 	}
-	err = h.db.SaveOrder(string(number), userID, h.qu)
+	err = h.db.SaveOrder(string(number), userID)
 	if err != nil {
 		if errors.Is(err, interfaces.ErrAlreadyExists) {
 			return c.NoContent(http.StatusOK)
@@ -109,7 +108,7 @@ func (h *Handler) PostUserOrders(c echo.Context) error {
 		}
 		return c.NoContent(http.StatusInternalServerError)
 	}
-
+	h.qu <- string(number)
 	return c.NoContent(http.StatusAccepted)
 }
 
@@ -128,7 +127,6 @@ func (h *Handler) GetUserOrders(c echo.Context) error {
 
 func (h *Handler) GetUserBalance(c echo.Context) error {
 	userID := utils.GetUserID(c)
-	var balance dto.Balance
 	balance, err := h.db.UserBalance(userID)
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
@@ -165,10 +163,8 @@ func (h *Handler) PostUserBalanceWithdraw(c echo.Context) error {
 }
 
 func (h *Handler) GetUserBalanceWithdrawals(c echo.Context) error {
-	var result []dto.Withdrawals
 	userID := utils.GetUserID(c)
 	result, err := h.db.GetUserWithdrawals(userID)
-	log.Println(err)
 	if err != nil {
 		if errors.Is(err, interfaces.ErrNotFound) {
 			return c.NoContent(http.StatusNoContent)

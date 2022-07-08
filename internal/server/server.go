@@ -19,14 +19,16 @@ func InitSrv(db interfaces.DB, qu chan string) *echo.Echo {
 	e.Use(middleware.Recover())
 	e.Use(middleware.Gzip())
 	e.Use(middleware.Decompress())
-	e.Use(middlewares.SessionWithCookies)
+
+	r := e.Group("")
+	r.Use(middlewares.SessionWithCookies)
 	e.POST("/api/user/register", handler.PostUserRegister)
-	e.POST("/api/user/login", handler.PostUserLogin)
-	e.POST("/api/user/orders", handler.PostUserOrders)
-	e.GET("/api/user/orders", handler.GetUserOrders)
-	e.GET("/api/user/balance", handler.GetUserBalance)
-	e.POST("/api/user/balance/withdraw", handler.PostUserBalanceWithdraw)
-	e.GET("/api/user/withdrawals", handler.GetUserBalanceWithdrawals)
+	r.POST("/api/user/login", handler.PostUserLogin)
+	r.POST("/api/user/orders", handler.PostUserOrders)
+	r.GET("/api/user/orders", handler.GetUserOrders)
+	r.GET("/api/user/balance", handler.GetUserBalance)
+	r.POST("/api/user/balance/withdraw", handler.PostUserBalanceWithdraw)
+	r.GET("/api/user/withdrawals", handler.GetUserBalanceWithdrawals)
 
 	return e
 }

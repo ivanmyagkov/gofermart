@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -17,7 +16,6 @@ import (
 )
 
 type Storage struct {
-	mu  sync.Mutex
 	db  *sql.DB
 	ctx context.Context
 }
@@ -47,7 +45,7 @@ func createTable(db *sql.DB) error {
 		id serial primary key,
 		login text not null unique,
 		password text not null,
-        "current" float not null default 0,
+        "current" float not null default 0 CHECK ("current">=0),
         withdrawn float not null  default 0
         );
 		CREATE TABLE IF NOT EXISTS orders (
@@ -72,7 +70,28 @@ func createTable(db *sql.DB) error {
 	}
 	return nil
 }
+func (D *Storage) SelectNewOrders() ([]string, error) {
+	query := `SELECT "number" from orders where status !=$1 and status !=$2`
+	rows, err := D.db.Query(query, dto.StatusInvalid, dto.StatusProcessed)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	var orders []string
+	var order string
+	for rows.Next() {
+		if err = rows.Scan(&order); err != nil {
+			return nil, err
+		}
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}
 func (D *Storage) UserRegister(user *dto.User) error {
 	hash, err := utils.HashPassword(user.Password)
 	if err != nil {
@@ -93,7 +112,10 @@ func (D *Storage) UserRegister(user *dto.User) error {
 func (D *Storage) UserLogin(user *dto.User) error {
 	var u dto.User
 	query := `SELECT id,password FROM users WHERE login=$1`
-	D.db.QueryRow(query, user.Login).Scan(&user.UserID, &u.Password)
+	err := D.db.QueryRow(query, user.Login).Scan(&user.UserID, &u.Password)
+	if err != nil {
+		return err
+	}
 	check := utils.CheckPasswordHash(user.Password, u.Password)
 	if !check {
 		return interfaces.ErrBadPassword
@@ -101,9 +123,7 @@ func (D *Storage) UserLogin(user *dto.User) error {
 	return nil
 }
 
-func (D *Storage) SaveOrder(number string, userID int, qu chan string) error {
-	D.mu.Lock()
-	defer D.mu.Unlock()
+func (D *Storage) SaveOrder(number string, userID int) error {
 	var order dto.Order
 	order.Number = number
 	order.Status = dto.StatusNew
@@ -129,13 +149,10 @@ func (D *Storage) SaveOrder(number string, userID int, qu chan string) error {
 			return interfaces.ErrOtherUser
 		}
 	}
-	qu <- number
 	return nil
 }
 
 func (D *Storage) GetOrders(userID int) ([]dto.Order, error) {
-	D.mu.Lock()
-	defer D.mu.Unlock()
 	var order dto.Order
 	var ordersArr []dto.Order
 	query := `SELECT number, status, accrual, uploaded_at FROM orders WHERE user_id = $1`
@@ -186,16 +203,19 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			insetrQuery := `INSERT INTO withdrawals (user_id, "number", sum, processed_at) VALUES ($1,$2,$3,$4)`
-			_, err = D.db.Exec(insetrQuery, userID, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
+			tx, err := D.db.Begin()
 			if err != nil {
-				log.Println(1, err)
+				return err
+			}
+
+			insetrQuery := `INSERT INTO withdrawals (user_id, "number", sum, processed_at) VALUES ($1,$2,$3,$4)`
+			_, err = tx.Exec(insetrQuery, userID, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
+			if err != nil {
 				return err
 			}
 			updateBalance := `update users set current = "current"-$1,withdrawn = withdrawn+$1 where id= $2 `
-			_, err = D.db.Exec(updateBalance, withdraw.Sum, userID)
+			_, err = tx.Exec(updateBalance, withdraw.Sum, userID)
 			if err != nil {
-				log.Println(2, err)
 				return err
 			}
 			return nil
@@ -206,20 +226,22 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	return interfaces.ErrWrongOrder
 }
 func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
-	D.mu.Lock()
-	defer D.mu.Unlock()
-	log.Println("ya tut")
 	var userID int
+	tx, err := D.db.Begin()
+	if err != nil {
+		return err
+	}
 	query := `UPDATE orders SET status = $1, accrual = $2 WHERE number = $3 RETURNING user_id`
-	err := D.db.QueryRow(query, ac.OrderStatus, ac.Accrual, ac.NumOrder).Scan(&userID)
+	err = tx.QueryRow(query, ac.OrderStatus, ac.Accrual, ac.NumOrder).Scan(&userID)
 	if err != nil {
 		return err
 	}
 	update := `UPDATE users SET current = current + $1 WHERE id = $2`
-	_, err = D.db.Exec(update, ac.Accrual, userID)
+	_, err = tx.Exec(update, ac.Accrual, userID)
 	if err != nil {
 		return err
 	}
+	tx.Commit()
 	return nil
 }
 

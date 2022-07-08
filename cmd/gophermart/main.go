@@ -21,7 +21,7 @@ import (
 	"ivanmyagkov/gofermart/internal/workerpool"
 )
 
-func init() {
+func main() {
 	err := env.Parse(&config.EnvVar)
 	if err != nil {
 		log.Fatal(err)
@@ -30,13 +30,10 @@ func init() {
 	flag.StringVar(&config.Flags.D, "d", config.EnvVar.DatabaseURI, "database uri")
 	flag.StringVar(&config.Flags.R, "r", config.EnvVar.AccrualSystemAddress, "accrual system address")
 	flag.Parse()
-}
-func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT)
-	var err error
 	//config
 	cfg := config.NewConfig(config.Flags.A, config.Flags.D, config.Flags.R)
 
@@ -46,8 +43,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create db %e", err)
 	}
-	g, _ := errgroup.WithContext(ctx)
 	qu := make(chan string, 100)
+	orders, err := db.SelectNewOrders()
+	if err != nil {
+		log.Println(err)
+	}
+	if len(orders) > 0 {
+		for _, order := range orders {
+			qu <- order
+		}
+	}
+
+	g, _ := errgroup.WithContext(ctx)
+
 	client := client.NewAccrualClient(config.Flags.R, db, qu)
 
 	srv := server.InitSrv(db, qu)
@@ -63,6 +71,12 @@ func main() {
 		log.Println("Shutting down...")
 
 		cancel()
+		close(qu)
+		err = g.Wait()
+		if err != nil {
+			log.Println("err-group...", err)
+		}
+
 		if err := srv.Shutdown(ctx); err != nil && err != ctx.Err() {
 			srv.Logger.Fatal(err)
 		}
@@ -70,11 +84,7 @@ func main() {
 		if err = db.Close(); err != nil {
 			log.Println("Failed db...", err)
 		}
-		close(qu)
-		err = g.Wait()
-		if err != nil {
-			log.Println("err-group...", err)
-		}
+
 	}()
 
 	serverAddress := cfg.GetRunAddress()

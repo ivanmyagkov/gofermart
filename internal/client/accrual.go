@@ -11,11 +11,6 @@ import (
 	"ivanmyagkov/gofermart/internal/interfaces"
 )
 
-const StatusRegistered string = "REGISTERED"
-const StatusInvalid string = "INVALID"
-const StatusProcessing string = "PROCESSING"
-const StatusProcessed string = "PROCESSED"
-
 type AccrualClient struct {
 	client  *http.Client
 	db      interfaces.DB
@@ -55,15 +50,15 @@ func (c *AccrualClient) SentOrder(order string) (int, error) {
 			c.qu <- order
 			return 0, err
 		}
-		if accrual.OrderStatus == StatusProcessed || accrual.OrderStatus == StatusInvalid {
+		if accrual.OrderStatus == dto.StatusProcessed || accrual.OrderStatus == dto.StatusInvalid {
 			if err = c.db.UpdateAccrualOrder(accrual); err != nil {
 				c.qu <- order
 				return 0, err
 			}
 		}
 
-		if accrual.OrderStatus == StatusProcessing || accrual.OrderStatus == StatusRegistered {
-			if accrual.OrderStatus == StatusProcessing {
+		if accrual.OrderStatus == dto.StatusProcessing || accrual.OrderStatus == dto.StatusRegistered {
+			if accrual.OrderStatus == dto.StatusProcessing {
 				if err = c.db.UpdateAccrualOrder(accrual); err != nil {
 					c.qu <- order
 					return 0, err

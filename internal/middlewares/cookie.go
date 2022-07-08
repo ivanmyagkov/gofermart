@@ -18,18 +18,15 @@ func SessionWithCookies(next echo.HandlerFunc) echo.HandlerFunc {
 		cookie, err := c.Cookie("token")
 		if err != nil {
 			return echo.NewHTTPError(http.StatusUnauthorized)
-		} else {
-			_, ok, err = utils.CheckToken(cookie.Value)
-
-			if err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError)
-			} else {
-				if !ok {
-					return echo.NewHTTPError(http.StatusUnauthorized)
-				}
-			}
 		}
+		_, ok, err = utils.CheckToken(cookie.Value)
 
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError)
+		}
+		if !ok {
+			return echo.NewHTTPError(http.StatusUnauthorized)
+		}
 		return next(c)
 	}
 }

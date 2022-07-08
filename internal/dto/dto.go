@@ -1,6 +1,8 @@
 package dto
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
 	UserID   int    `json:"user_id"`
@@ -29,8 +31,17 @@ type Order struct {
 	UploadedAt time.Time
 }
 
+type OrderStatus string
+
+const (
+	StatusRegistered OrderStatus = "REGISTERED"
+	StatusInvalid    OrderStatus = "INVALID"
+	StatusProcessing OrderStatus = "PROCESSING"
+	StatusProcessed  OrderStatus = "PROCESSED"
+)
+
 type AccrualResponse struct {
-	NumOrder    string  `json:"order"`
-	OrderStatus string  `json:"status"`
-	Accrual     float64 `json:"accrual"`
+	NumOrder    string      `json:"order"`
+	OrderStatus OrderStatus `json:"status"`
+	Accrual     float64     `json:"accrual"`
 }
