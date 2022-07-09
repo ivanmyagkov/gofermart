@@ -70,19 +70,18 @@ func main() {
 
 		log.Println("Shutting down...")
 
-		cancel()
-		close(qu)
-		err = g.Wait()
-		if err != nil {
-			log.Println("err-group...", err)
-		}
-
 		if err := srv.Shutdown(ctx); err != nil && err != ctx.Err() {
 			srv.Logger.Fatal(err)
 		}
 
 		if err = db.Close(); err != nil {
 			log.Println("Failed db...", err)
+		}
+		cancel()
+		close(qu)
+		err = g.Wait()
+		if err != nil {
+			log.Println("err-group...", err)
 		}
 
 	}()

@@ -45,7 +45,7 @@ func createTable(db *sql.DB) error {
 		id serial primary key,
 		login text not null unique,
 		password text not null,
-        "current" float not null default 0 CHECK ("current">=0),
+        "current" float not null default 0,
         withdrawn float not null  default 0
         );
 		CREATE TABLE IF NOT EXISTS orders (
@@ -200,7 +200,7 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	}
 	orderQuerty := `SELECT true FROM withdrawals WHERE "number"=$1 and user_id=$2`
 	err = D.db.QueryRow(orderQuerty, withdraw.Order, userID).Scan(&check)
-
+	log.Println(err)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			tx, err := D.db.Begin()
@@ -210,14 +210,17 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 
 			insetrQuery := `INSERT INTO withdrawals (user_id, "number", sum, processed_at) VALUES ($1,$2,$3,$4)`
 			_, err = tx.Exec(insetrQuery, userID, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
+			log.Println(err, "insert")
 			if err != nil {
 				return err
 			}
 			updateBalance := `update users set current = "current"-$1,withdrawn = withdrawn+$1 where id= $2 `
 			_, err = tx.Exec(updateBalance, withdraw.Sum, userID)
+			log.Println(err, "update")
 			if err != nil {
 				return err
 			}
+			tx.Commit()
 			return nil
 		}
 		return err
