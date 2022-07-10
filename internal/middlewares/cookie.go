@@ -10,22 +10,18 @@ import (
 
 func SessionWithCookies(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if c.Path() == "/api/user/login" || c.Path() == "/api/user/register" {
-			return next(c)
-		}
 		var ok bool
-
 		cookie, err := c.Cookie("token")
 		if err != nil {
 			return echo.NewHTTPError(http.StatusUnauthorized)
 		}
-		_, ok, err = utils.CheckToken(cookie.Value)
 
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError)
-		}
+		_, ok, err = utils.CheckToken(cookie.Value)
 		if !ok {
 			return echo.NewHTTPError(http.StatusUnauthorized)
+		}
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError)
 		}
 		return next(c)
 	}

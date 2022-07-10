@@ -142,7 +142,6 @@ func (D *Storage) SaveOrder(number string, userID int) error {
 			if err != nil {
 				return err
 			}
-
 			if user == userID {
 				return interfaces.ErrAlreadyExists
 			}
@@ -200,7 +199,6 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	}
 	orderQuerty := `SELECT true FROM withdrawals WHERE "number"=$1 and user_id=$2`
 	err = D.db.QueryRow(orderQuerty, withdraw.Order, userID).Scan(&check)
-	log.Println(err)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			tx, err := D.db.Begin()
@@ -210,14 +208,14 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 
 			insetrQuery := `INSERT INTO withdrawals (user_id, "number", sum, processed_at) VALUES ($1,$2,$3,$4)`
 			_, err = tx.Exec(insetrQuery, userID, withdraw.Order, withdraw.Sum, withdraw.ProcessedAt)
-			log.Println(err, "insert")
 			if err != nil {
+				tx.Rollback()
 				return err
 			}
 			updateBalance := `update users set current = "current"-$1,withdrawn = withdrawn+$1 where id= $2 `
 			_, err = tx.Exec(updateBalance, withdraw.Sum, userID)
-			log.Println(err, "update")
 			if err != nil {
+				tx.Rollback()
 				return err
 			}
 			tx.Commit()
@@ -237,11 +235,13 @@ func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
 	query := `UPDATE orders SET status = $1, accrual = $2 WHERE number = $3 RETURNING user_id`
 	err = tx.QueryRow(query, ac.OrderStatus, ac.Accrual, ac.NumOrder).Scan(&userID)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	update := `UPDATE users SET current = current + $1 WHERE id = $2`
 	_, err = tx.Exec(update, ac.Accrual, userID)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()

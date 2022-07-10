@@ -77,12 +77,13 @@ func main() {
 		if err = db.Close(); err != nil {
 			log.Println("Failed db...", err)
 		}
-		cancel()
-		close(qu)
+
 		err = g.Wait()
 		if err != nil {
 			log.Println("err-group...", err)
 		}
+		cancel()
+		close(qu)
 
 	}()
 
@@ -90,4 +91,5 @@ func main() {
 	if err := srv.Start(serverAddress); err != nil && err != http.ErrServerClosed {
 		srv.Logger.Fatal(err)
 	}
+
 }
