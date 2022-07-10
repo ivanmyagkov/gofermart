@@ -23,7 +23,7 @@ func InitSrv(db interfaces.DB, qu chan string) *echo.Echo {
 	r := e.Group("")
 	r.Use(middlewares.SessionWithCookies)
 	e.POST("/api/user/register", handler.PostUserRegister)
-	r.POST("/api/user/login", handler.PostUserLogin)
+	e.POST("/api/user/login", handler.PostUserLogin)
 	r.POST("/api/user/orders", handler.PostUserOrders)
 	r.GET("/api/user/orders", handler.GetUserOrders)
 	r.GET("/api/user/balance", handler.GetUserBalance)
