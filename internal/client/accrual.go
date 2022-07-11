@@ -8,71 +8,63 @@ import (
 	"strconv"
 
 	"ivanmyagkov/gofermart/internal/dto"
-	"ivanmyagkov/gofermart/internal/interfaces"
 )
 
 type AccrualClient struct {
 	client  *http.Client
-	db      interfaces.DB
 	address string
-	qu      chan string
+	qu      chan dto.Order
 }
 
-func NewAccrualClient(address string, db interfaces.DB, qu chan string) *AccrualClient {
+func NewAccrualClient(address string, qu chan dto.Order) *AccrualClient {
 	return &AccrualClient{
 		client:  &http.Client{},
 		address: address,
-		db:      db,
 		qu:      qu,
 	}
 }
 
-func (c *AccrualClient) SentOrder(order string) (int, error) {
-	url := fmt.Sprint(c.address, "/api/orders/", order)
+func (c *AccrualClient) SentOrder(order dto.Order) (dto.Order, int, error) {
 
-	//resp, err := c.client.R().SetContext(ctx).SetPathParams(map[string]string{"orderNumber": task.NumOrder}).Get(c.accrualAddress + "/api/orders/{orderNumber}")
+	url := fmt.Sprint(c.address, "/api/orders/", order.Number)
+
 	resp, err := c.client.Get(url)
 	if err != nil {
-		c.qu <- order
-		return 0, err
+		return order, 0, err
 	}
 	defer resp.Body.Close()
-	var accrual dto.AccrualResponse
+	var accrual dto.Order
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		c.qu <- order
-		return 0, err
+		return order, 0, err
+	}
+	err = json.Unmarshal(body, &accrual)
+	if err != nil {
+		return order, 0, err
 	}
 	switch resp.StatusCode {
 	case http.StatusOK:
-		err = json.Unmarshal(body, &accrual)
-		if err != nil {
-			c.qu <- order
-			return 0, err
-		}
-		if accrual.OrderStatus == dto.StatusProcessed || accrual.OrderStatus == dto.StatusInvalid {
-			if err = c.db.UpdateAccrualOrder(accrual); err != nil {
-				c.qu <- order
-				return 0, err
-			}
-		}
-
-		if accrual.OrderStatus == dto.StatusProcessing || accrual.OrderStatus == dto.StatusRegistered {
-			if accrual.OrderStatus == dto.StatusProcessing {
-				if err = c.db.UpdateAccrualOrder(accrual); err != nil {
-					c.qu <- order
-					return 0, err
-				}
-			}
-			c.qu <- order
-		}
+		return accrual, 0, nil
+		//if accrual.Status == dto.StatusProcessed || accrual.Status == dto.StatusInvalid {
+		//	if err = c.db.UpdateAccrualOrder(accrual); err != nil {
+		//		c.qu <- accrual
+		//		return 0, err
+		//	}
+		//}
+		//
+		//if accrual.Status == dto.StatusProcessing || accrual.Status == dto.StatusRegistered {
+		//	if accrual.Status == dto.StatusProcessing {
+		//		if err = c.db.UpdateAccrualOrder(accrual); err != nil {
+		//			c.qu <- accrual
+		//			return 0, err
+		//		}
+		//	}
+		//	c.qu <- accrual
+		//}
 
 	case http.StatusTooManyRequests:
 		wait, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
-		return wait, nil
-	default:
-		c.qu <- order
-
+		return order, wait, nil
 	}
-	return 0, nil
+	return order, 0, nil
 }

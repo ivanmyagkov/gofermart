@@ -4,12 +4,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"ivanmyagkov/gofermart/internal/dto"
 	"ivanmyagkov/gofermart/internal/handlers"
 	"ivanmyagkov/gofermart/internal/interfaces"
 	"ivanmyagkov/gofermart/internal/middlewares"
 )
 
-func InitSrv(db interfaces.DB, qu chan string) *echo.Echo {
+func InitSrv(db interfaces.DB, qu chan dto.Order) *echo.Echo {
 	//server
 	handler := handlers.New(db, qu)
 

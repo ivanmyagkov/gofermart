@@ -15,6 +15,7 @@ import (
 
 	"ivanmyagkov/gofermart/internal/client"
 	"ivanmyagkov/gofermart/internal/config"
+	"ivanmyagkov/gofermart/internal/dto"
 	"ivanmyagkov/gofermart/internal/interfaces"
 	"ivanmyagkov/gofermart/internal/server"
 	"ivanmyagkov/gofermart/internal/storage"
@@ -43,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create db %e", err)
 	}
-	qu := make(chan string, 100)
+	qu := make(chan dto.Order, 100)
 	orders, err := db.SelectNewOrders()
 	if err != nil {
 		log.Println(err)
@@ -56,11 +57,11 @@ func main() {
 
 	g, _ := errgroup.WithContext(ctx)
 
-	client := client.NewAccrualClient(config.Flags.R, db, qu)
+	client := client.NewAccrualClient(config.Flags.R, qu)
 
 	srv := server.InitSrv(db, qu)
 	for i := 1; i <= runtime.NumCPU(); i++ {
-		worker := workerpool.NewWorker(qu, client, ctx)
+		worker := workerpool.NewWorker(qu, client, ctx, db)
 		g.Go(worker.Do)
 	}
 

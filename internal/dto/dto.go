@@ -1,9 +1,5 @@
 package dto
 
-import (
-	"time"
-)
-
 type User struct {
 	UserID   int    `json:"user_id"`
 	Login    string `json:"login"`
@@ -22,18 +18,19 @@ type Balance struct {
 	Withdrawn float64 `json:"withdrawn"`
 }
 
-const StatusNew = "NEW"
+//const StatusNew = "NEW"
 
 type Order struct {
-	Number     string  `json:"number"`
-	Status     string  `json:"status"`
-	Accrual    float64 `json:"accrual"`
-	UploadedAt time.Time
+	Number     string      `json:"number"`
+	Status     OrderStatus `json:"status"`
+	Accrual    float64     `json:"accrual"`
+	UploadedAt string
 }
 
 type OrderStatus string
 
 const (
+	StatusNew        OrderStatus = "NEW"
 	StatusRegistered OrderStatus = "REGISTERED"
 	StatusInvalid    OrderStatus = "INVALID"
 	StatusProcessing OrderStatus = "PROCESSING"
