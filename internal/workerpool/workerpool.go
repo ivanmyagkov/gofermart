@@ -2,7 +2,6 @@ package workerpool
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"ivanmyagkov/gofermart/internal/client"
@@ -34,12 +33,10 @@ func (w *OutputWorker) Do() error {
 		case order := <-w.ch:
 			newOrder, wait, err := w.client.SentOrder(order)
 			if err != nil {
-				log.Println(err)
 				w.ch <- newOrder
 				return err
 			}
 			if wait != 0 {
-				log.Println(wait)
 				w.ch <- newOrder
 				time.Sleep(time.Duration(wait) * time.Second)
 				return nil
@@ -54,7 +51,6 @@ func (w *OutputWorker) Do() error {
 				if newOrder.OrderStatus == dto.StatusProcessing {
 					if order.OrderStatus != newOrder.OrderStatus {
 						if err = w.db.UpdateAccrualOrder(newOrder); err != nil {
-							log.Println(err)
 							w.ch <- newOrder
 							return err
 						}

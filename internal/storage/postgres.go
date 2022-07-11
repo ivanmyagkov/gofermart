@@ -232,7 +232,6 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 	return interfaces.ErrWrongOrder
 }
 func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
-	log.Println("ysdbfkdhfbsdhfbdsfh")
 	var userID int
 	tx, err := D.db.Begin()
 	if err != nil {
