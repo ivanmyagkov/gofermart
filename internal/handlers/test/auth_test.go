@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"ivanmyagkov/gofermart/internal/config"
+	"ivanmyagkov/gofermart/internal/dto"
 	"ivanmyagkov/gofermart/internal/handlers"
 	"ivanmyagkov/gofermart/internal/interfaces"
 	"ivanmyagkov/gofermart/internal/storage"
@@ -22,7 +23,7 @@ func TestHandler_PostUserRegister(t *testing.T) {
 	type args struct {
 		db  *interfaces.DB
 		cfg *config.Config
-		qu  chan string
+		qu  chan dto.AccrualResponse
 	}
 	type want struct {
 		code int
@@ -37,7 +38,7 @@ func TestHandler_PostUserRegister(t *testing.T) {
 			name:  "body is empty",
 			value: "",
 			args: args{
-				qu:  make(chan string, 100),
+				qu:  make(chan dto.AccrualResponse, 100),
 				cfg: config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 			},
 			want: want{code: 400},
@@ -46,7 +47,7 @@ func TestHandler_PostUserRegister(t *testing.T) {
 			name:  "already exists",
 			value: `{"login":"yan12", "password":"yan12"}`,
 			args: args{
-				qu:  make(chan string, 100),
+				qu:  make(chan dto.AccrualResponse, 100),
 				cfg: config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 			},
 			want: want{code: 409},
@@ -55,7 +56,7 @@ func TestHandler_PostUserRegister(t *testing.T) {
 			name:  "success",
 			value: `{"login":"yan123", "password":"yan123"}`,
 			args: args{
-				qu:  make(chan string, 100),
+				qu:  make(chan dto.AccrualResponse, 100),
 				cfg: config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 			},
 			want: want{code: 200},
@@ -86,7 +87,7 @@ func TestHandler_PostUserLogin(t *testing.T) {
 	type args struct {
 		db  *interfaces.DB
 		cfg *config.Config
-		qu  chan string
+		qu  chan dto.AccrualResponse
 	}
 	type want struct {
 		code int
@@ -101,7 +102,7 @@ func TestHandler_PostUserLogin(t *testing.T) {
 			name:  "body is empty",
 			value: "",
 			args: args{
-				qu:  make(chan string, 100),
+				qu:  make(chan dto.AccrualResponse, 100),
 				cfg: config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 			},
 			want: want{code: 400},
@@ -110,7 +111,7 @@ func TestHandler_PostUserLogin(t *testing.T) {
 			name:  "login or password is wrong",
 			value: `{"login":"yan12", "password":"1234"}`,
 			args: args{
-				qu:  make(chan string, 100),
+				qu:  make(chan dto.AccrualResponse, 100),
 				cfg: config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 			},
 			want: want{code: 401},
@@ -119,7 +120,7 @@ func TestHandler_PostUserLogin(t *testing.T) {
 			name:  "success",
 			value: `{"login":"yan123", "password":"yan123"}`,
 			args: args{
-				qu:  make(chan string, 100),
+				qu:  make(chan dto.AccrualResponse, 100),
 				cfg: config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 			},
 			want: want{code: 200},

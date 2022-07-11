@@ -70,7 +70,7 @@ func createTable(db *sql.DB) error {
 	}
 	return nil
 }
-func (D *Storage) SelectNewOrders() ([]dto.Order, error) {
+func (D *Storage) SelectNewOrders() ([]dto.AccrualResponse, error) {
 	query := `SELECT "number",status,accrual  from orders where status !=$1 and status !=$2`
 	rows, err := D.db.Query(query, dto.StatusInvalid, dto.StatusProcessed)
 	if err != nil {
@@ -81,13 +81,14 @@ func (D *Storage) SelectNewOrders() ([]dto.Order, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	var orders []dto.Order
+	var orders []dto.AccrualResponse
 	var order dto.Order
 	for rows.Next() {
 		if err = rows.Scan(&order.Number, &order.Status, &order.Accrual); err != nil {
 			return nil, err
 		}
-		orders = append(orders, order)
+
+		orders = append(orders, dto.AccrualResponse{Accrual: order.Accrual, NumOrder: order.Number, OrderStatus: order.Status})
 	}
 
 	return orders, nil
@@ -123,13 +124,13 @@ func (D *Storage) UserLogin(user *dto.User) error {
 	return nil
 }
 
-func (D *Storage) SaveOrder(number string, userID int) (dto.Order, error) {
+func (D *Storage) SaveOrder(number string, userID int) (dto.AccrualResponse, error) {
 	var order dto.Order
 	order.Number = number
 	order.Status = dto.StatusNew
 	order.Accrual = 0
 	time := time.Now().Format(time.RFC3339)
-
+	var acrResp dto.AccrualResponse
 	insertQuery := `INSERT INTO orders (number, user_id, status, accrual, uploaded_at) VALUES ($1,$2,$3,$4,$5)`
 	_, err := D.db.Exec(insertQuery, order.Number, userID, order.Status, order.Accrual, time)
 
@@ -139,16 +140,20 @@ func (D *Storage) SaveOrder(number string, userID int) (dto.Order, error) {
 			var user int
 			selectOrder := `SELECT user_id FROM orders WHERE number=$1`
 			err = D.db.QueryRow(selectOrder, number).Scan(&user)
+
 			if err != nil {
-				return order, err
+				return acrResp, err
 			}
 			if user == userID {
-				return order, interfaces.ErrAlreadyExists
+				return acrResp, interfaces.ErrAlreadyExists
 			}
-			return order, interfaces.ErrOtherUser
+			return acrResp, interfaces.ErrOtherUser
 		}
 	}
-	return order, nil
+	acrResp.OrderStatus = order.Status
+	acrResp.Accrual = order.Accrual
+	acrResp.NumOrder = order.Number
+	return acrResp, nil
 }
 
 func (D *Storage) GetOrders(userID int) ([]dto.Order, error) {
@@ -226,7 +231,7 @@ func (D *Storage) BalanceWithdraw(userID int, withdraw dto.Withdrawals) error {
 
 	return interfaces.ErrWrongOrder
 }
-func (D *Storage) UpdateAccrualOrder(ac dto.Order) error {
+func (D *Storage) UpdateAccrualOrder(ac dto.AccrualResponse) error {
 	log.Println("ysdbfkdhfbsdhfbdsfh")
 	var userID int
 	tx, err := D.db.Begin()
@@ -234,7 +239,7 @@ func (D *Storage) UpdateAccrualOrder(ac dto.Order) error {
 		return err
 	}
 	query := `UPDATE orders SET status = $1, accrual = $2 WHERE number = $3 RETURNING user_id`
-	err = tx.QueryRow(query, ac.Status, ac.Accrual, ac.Number).Scan(&userID)
+	err = tx.QueryRow(query, ac.OrderStatus, ac.Accrual, ac.NumOrder).Scan(&userID)
 	if err != nil {
 		tx.Rollback()
 		return err

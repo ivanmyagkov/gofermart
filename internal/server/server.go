@@ -10,7 +10,7 @@ import (
 	"ivanmyagkov/gofermart/internal/middlewares"
 )
 
-func InitSrv(db interfaces.DB, qu chan dto.Order) *echo.Echo {
+func InitSrv(db interfaces.DB, qu chan dto.AccrualResponse) *echo.Echo {
 	//server
 	handler := handlers.New(db, qu)
 

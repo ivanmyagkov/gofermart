@@ -21,10 +21,10 @@ type Balance struct {
 //const StatusNew = "NEW"
 
 type Order struct {
-	Number     string      `json:"number"`
+	Number     string      `json:"order"`
 	Status     OrderStatus `json:"status"`
 	Accrual    float64     `json:"accrual"`
-	UploadedAt string
+	UploadedAt string      `json:"uploaded_at,omitempty"`
 }
 
 type OrderStatus string

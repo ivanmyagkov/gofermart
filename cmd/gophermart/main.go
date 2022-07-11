@@ -44,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create db %e", err)
 	}
-	qu := make(chan dto.Order, 100)
+	qu := make(chan dto.AccrualResponse, 100)
 	orders, err := db.SelectNewOrders()
 	if err != nil {
 		log.Println(err)

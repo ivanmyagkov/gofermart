@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ivanmyagkov/gofermart/internal/config"
+	"ivanmyagkov/gofermart/internal/dto"
 	"ivanmyagkov/gofermart/internal/handlers"
 	"ivanmyagkov/gofermart/internal/interfaces"
 	"ivanmyagkov/gofermart/internal/middlewares"
@@ -21,7 +22,7 @@ func TestHandler_GetUserBalance(t *testing.T) {
 	type args struct {
 		db     *interfaces.DB
 		cfg    *config.Config
-		qu     chan string
+		qu     chan dto.AccrualResponse
 		cookie string
 	}
 	type want struct {
@@ -35,7 +36,7 @@ func TestHandler_GetUserBalance(t *testing.T) {
 		{
 			name: "body without token",
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "123454546565gdrrgr",
 			},
@@ -44,7 +45,7 @@ func TestHandler_GetUserBalance(t *testing.T) {
 		{
 			name: "success",
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoieWFuMTIiLCJ1c2VySUQiOjF9.vrpDzuAw8sTMKQWFMPqM03oFrMAbFYx_h0G84-3jNi0",
 			},

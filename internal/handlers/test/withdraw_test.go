@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"ivanmyagkov/gofermart/internal/config"
+	"ivanmyagkov/gofermart/internal/dto"
 	"ivanmyagkov/gofermart/internal/handlers"
 	"ivanmyagkov/gofermart/internal/interfaces"
 	"ivanmyagkov/gofermart/internal/middlewares"
@@ -22,7 +23,7 @@ func TestHandler_PostUserBalanceWithdraw(t *testing.T) {
 	type args struct {
 		db     *interfaces.DB
 		cfg    *config.Config
-		qu     chan string
+		qu     chan dto.AccrualResponse
 		cookie string
 	}
 	type want struct {
@@ -38,7 +39,7 @@ func TestHandler_PostUserBalanceWithdraw(t *testing.T) {
 			name:  "body without token",
 			value: `{"order": "2345","sum": 1}`,
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "123454546565gdrrgr",
 			},
@@ -48,7 +49,7 @@ func TestHandler_PostUserBalanceWithdraw(t *testing.T) {
 			name:  "wrong order",
 			value: `{"order": "23451","sum": 1}`,
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoieWFuMTIiLCJ1c2VySUQiOjF9.vrpDzuAw8sTMKQWFMPqM03oFrMAbFYx_h0G84-3jNi0",
 			},
@@ -58,7 +59,7 @@ func TestHandler_PostUserBalanceWithdraw(t *testing.T) {
 			name:  "success",
 			value: `{"order": "2345","sum": 1}`,
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoieWFuMTIiLCJ1c2VySUQiOjF9.vrpDzuAw8sTMKQWFMPqM03oFrMAbFYx_h0G84-3jNi0",
 			},
@@ -68,7 +69,7 @@ func TestHandler_PostUserBalanceWithdraw(t *testing.T) {
 			name:  "doesnt have any money",
 			value: `{"order": "2345","sum": 1500}`,
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoieWFuMTIiLCJ1c2VySUQiOjF9.vrpDzuAw8sTMKQWFMPqM03oFrMAbFYx_h0G84-3jNi0",
 			},
@@ -104,7 +105,7 @@ func TestHandler_GetUserBalanceWithdrawals(t *testing.T) {
 	type args struct {
 		db     *interfaces.DB
 		cfg    *config.Config
-		qu     chan string
+		qu     chan dto.AccrualResponse
 		cookie string
 	}
 	type want struct {
@@ -118,7 +119,7 @@ func TestHandler_GetUserBalanceWithdrawals(t *testing.T) {
 		{
 			name: "body without token",
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "123454546565gdrrgr",
 			},
@@ -127,7 +128,7 @@ func TestHandler_GetUserBalanceWithdrawals(t *testing.T) {
 		{
 			name: "not found",
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoieWFuMTIzIiwidXNlcklEIjo2fQ.YEpE706fNF6PoIqGBXh6345Z0WlrEjJf94jpB1VJgmI",
 			},
@@ -136,7 +137,7 @@ func TestHandler_GetUserBalanceWithdrawals(t *testing.T) {
 		{
 			name: "success",
 			args: args{
-				qu:     make(chan string, 100),
+				qu:     make(chan dto.AccrualResponse, 100),
 				cfg:    config.NewConfig(":8080", "postgres://ivanmyagkov@localhost:5432/postgres?sslmode=disable", "http://localhost:8080"),
 				cookie: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoieWFuMTIiLCJ1c2VySUQiOjF9.vrpDzuAw8sTMKQWFMPqM03oFrMAbFYx_h0G84-3jNi0",
 			},

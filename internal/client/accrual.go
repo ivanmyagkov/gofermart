@@ -13,10 +13,10 @@ import (
 type AccrualClient struct {
 	client  *http.Client
 	address string
-	qu      chan dto.Order
+	qu      chan dto.AccrualResponse
 }
 
-func NewAccrualClient(address string, qu chan dto.Order) *AccrualClient {
+func NewAccrualClient(address string, qu chan dto.AccrualResponse) *AccrualClient {
 	return &AccrualClient{
 		client:  &http.Client{},
 		address: address,
@@ -24,16 +24,16 @@ func NewAccrualClient(address string, qu chan dto.Order) *AccrualClient {
 	}
 }
 
-func (c *AccrualClient) SentOrder(order dto.Order) (dto.Order, int, error) {
+func (c *AccrualClient) SentOrder(order dto.AccrualResponse) (dto.AccrualResponse, int, error) {
 
-	url := fmt.Sprint(c.address, "/api/orders/", order.Number)
+	url := fmt.Sprint(c.address, "/api/orders/", order.NumOrder)
 
 	resp, err := c.client.Get(url)
 	if err != nil {
 		return order, 0, err
 	}
 	defer resp.Body.Close()
-	var accrual dto.Order
+	var accrual dto.AccrualResponse
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return order, 0, err
@@ -45,23 +45,6 @@ func (c *AccrualClient) SentOrder(order dto.Order) (dto.Order, int, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return accrual, 0, nil
-		//if accrual.Status == dto.StatusProcessed || accrual.Status == dto.StatusInvalid {
-		//	if err = c.db.UpdateAccrualOrder(accrual); err != nil {
-		//		c.qu <- accrual
-		//		return 0, err
-		//	}
-		//}
-		//
-		//if accrual.Status == dto.StatusProcessing || accrual.Status == dto.StatusRegistered {
-		//	if accrual.Status == dto.StatusProcessing {
-		//		if err = c.db.UpdateAccrualOrder(accrual); err != nil {
-		//			c.qu <- accrual
-		//			return 0, err
-		//		}
-		//	}
-		//	c.qu <- accrual
-		//}
-
 	case http.StatusTooManyRequests:
 		wait, _ := strconv.Atoi(resp.Header.Get("Retry-After"))
 		return order, wait, nil

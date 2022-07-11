@@ -2,6 +2,7 @@ package workerpool
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"ivanmyagkov/gofermart/internal/client"
@@ -10,13 +11,13 @@ import (
 )
 
 type OutputWorker struct {
-	ch     chan dto.Order
+	ch     chan dto.AccrualResponse
 	db     interfaces.DB
 	client *client.AccrualClient
 	ctx    context.Context
 }
 
-func NewWorker(ch chan dto.Order, client *client.AccrualClient, ctx context.Context, db interfaces.DB) *OutputWorker {
+func NewWorker(ch chan dto.AccrualResponse, client *client.AccrualClient, ctx context.Context, db interfaces.DB) *OutputWorker {
 	return &OutputWorker{
 		ch:     ch,
 		ctx:    ctx,
@@ -33,26 +34,27 @@ func (w *OutputWorker) Do() error {
 		case order := <-w.ch:
 			newOrder, wait, err := w.client.SentOrder(order)
 			if err != nil {
+				log.Println(err)
 				w.ch <- newOrder
 				return err
 			}
 			if wait != 0 {
+				log.Println(wait)
 				w.ch <- newOrder
 				time.Sleep(time.Duration(wait) * time.Second)
 				return nil
 			}
-
-			if newOrder.Status == dto.StatusProcessed || newOrder.Status == dto.StatusInvalid {
+			if newOrder.OrderStatus == dto.StatusProcessed || newOrder.OrderStatus == dto.StatusInvalid {
 				if err = w.db.UpdateAccrualOrder(newOrder); err != nil {
 					w.ch <- newOrder
 					return err
 				}
 			}
-
-			if newOrder.Status == dto.StatusProcessing || newOrder.Status == dto.StatusRegistered {
-				if newOrder.Status == dto.StatusProcessing {
-					if order.Status != newOrder.Status {
+			if newOrder.OrderStatus == dto.StatusProcessing || newOrder.OrderStatus == dto.StatusRegistered {
+				if newOrder.OrderStatus == dto.StatusProcessing {
+					if order.OrderStatus != newOrder.OrderStatus {
 						if err = w.db.UpdateAccrualOrder(newOrder); err != nil {
+							log.Println(err)
 							w.ch <- newOrder
 							return err
 						}

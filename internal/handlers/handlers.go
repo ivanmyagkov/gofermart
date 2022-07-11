@@ -16,10 +16,10 @@ import (
 
 type Handler struct {
 	db interfaces.DB
-	qu chan dto.Order
+	qu chan dto.AccrualResponse
 }
 
-func New(db interfaces.DB, qu chan dto.Order) *Handler {
+func New(db interfaces.DB, qu chan dto.AccrualResponse) *Handler {
 	return &Handler{
 		db: db,
 		qu: qu,
